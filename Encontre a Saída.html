@@ -1,0 +1,900 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Encontre a Saída · Labirinto</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+            font-family: 'Segoe UI', Roboto, system-ui, sans-serif;
+        }
+        body {
+            min-height: 100vh;
+            background: linear-gradient(145deg, #0b1a2e, #1a2f3f);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 16px;
+        }
+        .game-wrapper {
+            max-width: 700px;
+            width: 100%;
+            background: #1e3a5f;
+            border-radius: 48px;
+            padding: 24px;
+            box-shadow: 0 20px 30px rgba(0,0,0,0.7), inset 0 1px 4px #a5c9ff;
+            border: 1px solid #5688d0;
+        }
+        .screen {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+        }
+        .active-screen {
+            display: flex;
+        }
+        h1 {
+            font-size: 3rem;
+            font-weight: 900;
+            text-transform: uppercase;
+            color: #f9e56a;
+            text-shadow: 0 5px 0 #b45309, 0 10px 15px black;
+            letter-spacing: 3px;
+            margin-bottom: 20px;
+        }
+        .btn {
+            background: #facc15;
+            border: none;
+            color: #0f172a;
+            font-weight: 800;
+            font-size: 1.8rem;
+            padding: 16px 48px;
+            border-radius: 60px;
+            box-shadow: 0 10px 0 #b45309, 0 6px 20px black;
+            cursor: pointer;
+            transition: 0.08s linear;
+            margin: 10px;
+            border: 2px solid #ffdf7e;
+        }
+        .btn:active {
+            transform: translateY(7px);
+            box-shadow: 0 3px 0 #b45309;
+        }
+        .menu-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 20px;
+            width: 100%;
+        }
+        .menu-btn {
+            font-size: 1.5rem;
+            padding: 12px 28px;
+            background: #2b4b75;
+            color: white;
+            box-shadow: 0 7px 0 #0f1f2f;
+            border: 1px solid #79a7e0;
+            flex: 1 1 auto;
+        }
+        .top-bar {
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+            background: #112b45;
+            padding: 12px 20px;
+            border-radius: 40px;
+            color: white;
+            font-weight: bold;
+            font-size: 1.2rem;
+            border: 1px solid #3c6e9c;
+        }
+        .currency {
+            background: #facc15;
+            color: #0f172a;
+            padding: 5px 20px;
+            border-radius: 30px;
+            box-shadow: inset 0 -2px 0 #b45309;
+        }
+        .chapters-grid, .levels-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 12px;
+            width: 100%;
+            margin: 10px 0;
+        }
+        .chapter-card {
+            background: #27496d;
+            border-radius: 30px;
+            padding: 12px 5px;
+            text-align: center;
+            color: white;
+            font-weight: bold;
+            box-shadow: 0 5px 0 #0f1f2f;
+            cursor: pointer;
+            border: 1px solid #5e8bc0;
+            position: relative;
+        }
+        .chapter-card.locked {
+            opacity: 0.5;
+            cursor: not-allowed;
+            background: #1f3a52;
+        }
+        .level-btn {
+            background: #0f2b42;
+            border-radius: 20px;
+            padding: 10px;
+            color: white;
+            font-weight: bold;
+            box-shadow: 0 4px 0 #051016;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            border: 1px solid #38658f;
+            position: relative;
+        }
+        .level-btn.locked {
+            opacity: 0.5;
+            cursor: not-allowed;
+            background: #1a2c3b;
+        }
+        .stars {
+            color: #facc15;
+            font-size: 1.2rem;
+            letter-spacing: 3px;
+        }
+        .game-header {
+            display: flex;
+            width: 100%;
+            justify-content: space-between;
+            background: #112b45;
+            padding: 12px 20px;
+            border-radius: 40px;
+            color: white;
+        }
+        .maze-grid {
+            display: grid;
+            gap: 3px;
+            background: #0f1f2f;
+            padding: 12px;
+            border-radius: 30px;
+            margin: 10px 0;
+        }
+        .cell {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            background: #2d4b6e;
+            transition: 0.1s;
+        }
+        .path { background: #cbd5e1; box-shadow: inset 0 -2px 0 #94a3b8; }
+        .wall { background: #1e2b3a; box-shadow: inset 0 0 0 1px #4b5563; }
+        .player { background: #ef4444 !important; box-shadow: 0 0 0 2px #fee2e2, 0 4px 0 #7f1d1d; transform: translateY(-1px); }
+        .target { background: #22c55e !important; box-shadow: 0 0 0 2px #bbf7d0, 0 4px 0 #14532d; transform: translateY(-1px); }
+        .items-bar {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            justify-content: center;
+            margin: 10px 0;
+        }
+        .item-btn {
+            background: #2e4e72;
+            border: none;
+            color: white;
+            padding: 8px 12px;
+            border-radius: 40px;
+            font-weight: bold;
+            box-shadow: 0 4px 0 #0f1f2f;
+            cursor: pointer;
+            border: 1px solid #6590c0;
+        }
+        .back-btn {
+            background: #475569;
+            font-size: 1.2rem;
+            padding: 8px 24px;
+            box-shadow: 0 5px 0 #1e293b;
+        }
+        .store-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 16px;
+            width: 100%;
+        }
+        .store-item {
+            background: #154360;
+            border-radius: 30px;
+            padding: 16px;
+            color: white;
+            text-align: center;
+            border: 2px solid #facc15;
+        }
+        .price {
+            color: #facc15;
+            font-weight: bold;
+            font-size: 1.4rem;
+        }
+        .next-level-btn {
+            background: #22c55e;
+            color: #0f172a;
+            font-size: 1.4rem;
+            padding: 10px 30px;
+            box-shadow: 0 7px 0 #14532d;
+        }
+        .locked-icon {
+            font-size: 1.5rem;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+<div class="game-wrapper" id="gameWrapper">
+    <!-- Tela Inicial -->
+    <div id="startScreen" class="screen active-screen">
+        <h1>ENCONTRE A SAÍDA</h1>
+        <button class="btn" id="startBtn">▶ JOGAR</button>
+    </div>
+
+    <!-- Menu Principal -->
+    <div id="mainMenuScreen" class="screen">
+        <div class="top-bar">
+            <span>💎 <span id="crystalBalance">0</span></span>
+            <span>⭐ <span id="starBalance">0</span></span>
+            <span>📅 <span id="dailyDate"></span></span>
+        </div>
+        <div class="menu-buttons">
+            <button class="btn menu-btn" id="dailyBtn">🌞 Desafio do Dia</button>
+            <button class="btn menu-btn" id="careerBtn">🏆 Carreira</button>
+            <button class="btn menu-btn" id="shopBtn">🛒 Loja</button>
+        </div>
+    </div>
+
+    <!-- Tela Carreira (capítulos) -->
+    <div id="careerScreen" class="screen">
+        <div class="top-bar">
+            <span>💎 <span id="careerCrystals">0</span></span>
+            <span>⭐ <span id="careerStars">0</span></span>
+            <button class="back-btn" id="backFromCareer">← Voltar</button>
+        </div>
+        <h2 style="color:white; margin:0;">Capítulos</h2>
+        <div id="chaptersContainer" class="chapters-grid"></div>
+    </div>
+
+    <!-- Tela de Níveis de um Capítulo -->
+    <div id="levelsScreen" class="screen">
+        <div class="top-bar">
+            <span>Capítulo <span id="currentChapterNum"></span></span>
+            <span>⭐ <span id="chapterStars">0</span>/<span id="chapterMaxStars">60</span></span>
+            <button class="back-btn" id="backFromLevels">← Voltar</button>
+        </div>
+        <div id="levelsContainer" class="levels-grid"></div>
+    </div>
+
+    <!-- Tela do Jogo -->
+    <div id="gameScreen" class="screen">
+        <div class="game-header">
+            <span>⏱️ <span id="gameTimer">0s</span></span>
+            <span>👣 <span id="gameMoves">0</span></span>
+            <span>⭐ <span id="gameStarsEarn">0</span></span>
+        </div>
+        <div id="mazeGrid" class="maze-grid"></div>
+        <div class="items-bar" id="itemsBar"></div>
+        <div style="display:flex; gap:10px; flex-wrap: wrap; justify-content: center;">
+            <button class="back-btn" id="restartGameBtn">↺ Recomeçar</button>
+            <button class="back-btn" id="exitGameBtn">🚪 Sair</button>
+            <button class="back-btn next-level-btn" id="nextLevelBtn" style="display:none;">▶ Próximo Nível</button>
+        </div>
+        <div id="gameMessage" style="color:#facc15; font-weight:bold;"></div>
+    </div>
+
+    <!-- Tela do Desafio Diário -->
+    <div id="dailyScreen" class="screen">
+        <div class="top-bar">
+            <span>📅 Desafio de Hoje</span>
+            <button class="back-btn" id="backFromDaily">← Voltar</button>
+        </div>
+        <div id="dailyMazeContainer" style="display:flex; flex-direction:column; align-items:center; gap:15px;">
+            <div id="dailyMazeGrid" class="maze-grid"></div>
+            <div>⭐ Melhor: <span id="dailyBestStars">0</span>  ⏱️ <span id="dailyBestTime">-</span></div>
+            <button class="btn menu-btn" id="playDailyBtn">Jogar Desafio</button>
+        </div>
+    </div>
+
+    <!-- Tela da Loja -->
+    <div id="shopScreen" class="screen">
+        <div class="top-bar">
+            <span>💎 <span id="shopCrystals">0</span></span>
+            <button class="back-btn" id="backFromShop">← Voltar</button>
+        </div>
+        <h2 style="color:white;">Itens</h2>
+        <div class="store-grid" id="storeItems"></div>
+    </div>
+</div>
+
+<script>
+    (function() {
+        // ---------- CONFIGURAÇÕES ----------
+        const CHAPTERS = 5;
+        const LEVELS_PER_CHAPTER = 20;
+        const TOTAL_LEVELS = 100;
+        const SIZES = [5,7,9,11,13]; // capítulo 1->5, 2->7, etc.
+        const CRYSTALS_PER_COMPLETE = 10; // cristais ganhos ao completar um nível
+        const STAR_THRESHOLDS = [0, 30, 40, 50, 60]; // estrelas mínimas para desbloquear capítulo 2,3,4,5 (cap1 livre)
+
+        // Probabilidade de caminho por capítulo (índice 0-based)
+        const PATH_PROB = [0.7, 0.65, 0.6, 0.55, 0.5];
+
+        // Estrelas: limites de tempo (segundos) para 3,2,1 estrelas (baseado no tamanho)
+        function getTimeLimits(size) {
+            if (size <=5) return [8, 15, 25]; // 3estrelas <=8s, 2<=15, 1<=25
+            if (size <=7) return [15, 25, 40];
+            if (size <=9) return [25, 40, 60];
+            if (size <=11) return [35, 55, 80];
+            return [45, 70, 100]; // 13x13
+        }
+
+        // Itens da loja (id, nome, preço, desc) - removido 'path'
+        const storeItems = [
+            { id: 'rewind', name: '⏪ Retroceder 5s', price: 15, desc: 'Volta o cronômetro 5 segundos' },
+            { id: 'freeze', name: '❄️ Congelar tempo', price: 25, desc: 'Tempo para por 5s' },
+        ];
+        // Inventário do jogador
+        let inventory = { rewind: 0, freeze: 0 };
+
+        // Moedas: cristais (para loja) e estrelas (para progresso)
+        let crystalBalance = 0;
+        let starBalance = 0; // total de estrelas acumuladas (soma de todas estrelas obtidas)
+
+        // Progresso carreira:
+        let careerBestTimes = new Array(TOTAL_LEVELS).fill(null);
+        let careerStars = new Array(TOTAL_LEVELS).fill(0);
+        let levelUnlocked = new Array(TOTAL_LEVELS).fill(false);
+        let chapterUnlocked = [true, false, false, false, false]; // cap1 começa desbloqueado
+
+        // Desafio diário
+        let dailyBest = { time: null, stars: 0, date: '' };
+
+        // Estado atual do jogo
+        let currentGame = {
+            mode: null,
+            levelIndex: 0,
+            chapter: 0,
+            size: 5,
+            grid: [],
+            playerPos: { x: 0, y: 0 },
+            startPos: { x: 0, y: 0 },
+            endPos: { x: 0, y: 0 },
+            moves: 0,
+            seconds: 0,
+            timerInterval: null,
+            gameActive: false,
+            finished: false,
+            firstMove: false,
+            revealed: false, // controla se o labirinto está visível
+        };
+
+        // Elementos DOM
+        const screens = {
+            start: document.getElementById('startScreen'),
+            mainMenu: document.getElementById('mainMenuScreen'),
+            career: document.getElementById('careerScreen'),
+            levels: document.getElementById('levelsScreen'),
+            game: document.getElementById('gameScreen'),
+            daily: document.getElementById('dailyScreen'),
+            shop: document.getElementById('shopScreen'),
+        };
+        const crystalSpan = document.getElementById('crystalBalance');
+        const starSpan = document.getElementById('starBalance');
+        const careerCrystals = document.getElementById('careerCrystals');
+        const careerStarsSpan = document.getElementById('careerStars');
+        const shopCrystals = document.getElementById('shopCrystals');
+        const dailyDateSpan = document.getElementById('dailyDate');
+        const chaptersContainer = document.getElementById('chaptersContainer');
+        const levelsContainer = document.getElementById('levelsContainer');
+        const currentChapterNumSpan = document.getElementById('currentChapterNum');
+        const chapterStarsSpan = document.getElementById('chapterStars');
+        const chapterMaxStarsSpan = document.getElementById('chapterMaxStars');
+        const gameTimer = document.getElementById('gameTimer');
+        const gameMoves = document.getElementById('gameMoves');
+        const gameStarsEarn = document.getElementById('gameStarsEarn');
+        const mazeGridDiv = document.getElementById('mazeGrid');
+        const dailyMazeGrid = document.getElementById('dailyMazeGrid');
+        const dailyBestStars = document.getElementById('dailyBestStars');
+        const dailyBestTime = document.getElementById('dailyBestTime');
+        const storeItemsDiv = document.getElementById('storeItems');
+        const gameMessage = document.getElementById('gameMessage');
+        const itemsBar = document.getElementById('itemsBar');
+        const nextLevelBtn = document.getElementById('nextLevelBtn');
+
+        // ---------- FUNÇÕES DE ARMAZENAMENTO ----------
+        function loadProgress() {
+            try {
+                const data = JSON.parse(localStorage.getItem('mazeProgressV3'));
+                if (data) {
+                    crystalBalance = data.crystals || 0;
+                    starBalance = data.stars || 0;
+                    careerBestTimes = data.careerTimes || new Array(TOTAL_LEVELS).fill(null);
+                    careerStars = data.careerStars || new Array(TOTAL_LEVELS).fill(0);
+                    levelUnlocked = data.levelUnlocked || new Array(TOTAL_LEVELS).fill(false);
+                    chapterUnlocked = data.chapterUnlocked || [true, false, false, false, false];
+                    inventory = data.inventory || { rewind:0, freeze:0 };
+                    dailyBest = data.dailyBest || { time:null, stars:0, date:'' };
+                }
+            } catch (e) {}
+            levelUnlocked[0] = true;
+            const todayStr = getTodayDateString();
+            if (dailyBest.date !== todayStr) {
+                dailyBest = { time: null, stars: 0, date: todayStr };
+                saveProgress();
+            }
+            updateChaptersUnlock();
+        }
+
+        function saveProgress() {
+            const data = {
+                crystals: crystalBalance,
+                stars: starBalance,
+                careerTimes: careerBestTimes,
+                careerStars: careerStars,
+                levelUnlocked: levelUnlocked,
+                chapterUnlocked: chapterUnlocked,
+                inventory: inventory,
+                dailyBest: dailyBest,
+            };
+            localStorage.setItem('mazeProgressV3', JSON.stringify(data));
+            updateStarDisplay();
+        }
+
+        function getTodayDateString() {
+            const d = new Date();
+            return `${d.getFullYear()}-${d.getMonth()+1}-${d.getDate()}`;
+        }
+
+        function updateChaptersUnlock() {
+            let totalStars = 0;
+            for (let c = 0; c < CHAPTERS; c++) {
+                if (c === 0) {
+                    chapterUnlocked[0] = true;
+                } else {
+                    const prevChapterStars = getChapterStars(c-1);
+                    if (prevChapterStars >= STAR_THRESHOLDS[c]) {
+                        chapterUnlocked[c] = true;
+                    } else {
+                        chapterUnlocked[c] = false;
+                    }
+                }
+            }
+            saveProgress();
+        }
+
+        function getChapterStars(chapterIdx) {
+            let sum = 0;
+            const start = chapterIdx * LEVELS_PER_CHAPTER;
+            for (let i=0; i<LEVELS_PER_CHAPTER; i++) {
+                sum += careerStars[start + i] || 0;
+            }
+            return sum;
+        }
+
+        // ---------- GERADOR DE LABIRINTO COM DENSIDADE VARIÁVEL ----------
+        function generateMaze(size, chapter, seed = null) {
+            const prob = PATH_PROB[chapter-1] || 0.6; // fallback
+            let rng = seed ? createSeededRandom(seed) : Math.random;
+            let grid = Array(size).fill().map(() => Array(size).fill(0));
+            grid[0][0] = 1;
+            grid[size-1][size-1] = 1;
+
+            for (let y=0; y<size; y++) {
+                for (let x=0; x<size; x++) {
+                    if ((x===0 && y===0) || (x===size-1 && y===size-1)) continue;
+                    grid[y][x] = rng() < prob ? 1 : 0;
+                }
+            }
+
+            if (!hasPath(grid, {x:0,y:0}, {x:size-1,y:size-1}, size)) {
+                let attempts = 0;
+                while (!hasPath(grid, {x:0,y:0}, {x:size-1,y:size-1}, size) && attempts < 200) {
+                    const x = Math.floor(rng() * size);
+                    const y = Math.floor(rng() * size);
+                    grid[y][x] = 1;
+                    attempts++;
+                }
+            }
+            return grid;
+        }
+
+        function createSeededRandom(seed) {
+            let state = seed % 2147483647;
+            if (state <= 0) state = 1;
+            return function() {
+                state = (state * 1103515245 + 12345) % 2147483647;
+                return state / 2147483647;
+            };
+        }
+
+        function hasPath(grid, start, end, size) {
+            const visited = Array(size).fill().map(() => Array(size).fill(false));
+            const queue = [start];
+            visited[start.y][start.x] = true;
+            while (queue.length) {
+                const {x,y} = queue.shift();
+                if (x===end.x && y===end.y) return true;
+                const dirs = [[0,1],[1,0],[0,-1],[-1,0]];
+                for (const [dx,dy] of dirs) {
+                    const nx = x+dx, ny = y+dy;
+                    if (nx>=0 && nx<size && ny>=0 && ny<size && grid[ny][nx]===1 && !visited[ny][nx]) {
+                        visited[ny][nx] = true;
+                        queue.push({x:nx, y:ny});
+                    }
+                }
+            }
+            return false;
+        }
+
+        // ---------- RENDERIZA GRID (com opção de ocultar) ----------
+        function renderGrid(grid, playerPos, endPos, container, revealed) {
+            container.innerHTML = '';
+            container.style.gridTemplateColumns = `repeat(${grid.length}, 1fr)`;
+            for (let y=0; y<grid.length; y++) {
+                for (let x=0; x<grid.length; x++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'cell';
+                    // Se não revelado, todas as células são mostradas como parede (escuras)
+                    if (revealed) {
+                        if (grid[y][x] === 1) cell.classList.add('path');
+                        else cell.classList.add('wall');
+                    } else {
+                        cell.classList.add('wall'); // tudo escuro
+                    }
+                    // Posição do jogador e alvo só são mostrados se revelado
+                    if (revealed) {
+                        if (x === playerPos.x && y === playerPos.y) cell.classList.add('player');
+                        else if (x === endPos.x && y === endPos.y) cell.classList.add('target');
+                    } else {
+                        // Mesmo oculto, podemos mostrar a posição do jogador? Talvez sim, para ele saber onde está
+                        if (x === playerPos.x && y === playerPos.y) cell.classList.add('player');
+                        // Mas o alvo fica oculto? Vamos deixar o alvo visível mesmo oculto? Não, para dificultar, também ocultamos.
+                        // O jogador precisa encontrar a saída sem ver onde está. Então não mostramos o alvo.
+                        // Então só mostramos o player.
+                        if (x === playerPos.x && y === playerPos.y) cell.classList.add('player');
+                    }
+                    container.appendChild(cell);
+                }
+            }
+        }
+
+        // ---------- LÓGICA DO JOGO ----------
+        function startGame(mode, levelIndex, chapter) {
+            if (currentGame.timerInterval) clearInterval(currentGame.timerInterval);
+            const size = SIZES[chapter-1];
+            const grid = generateMaze(size, chapter, mode==='daily' ? getSeedFromDate() : null);
+            const playerPos = {x:0, y:0};
+            const endPos = {x:size-1, y:size-1};
+            currentGame = {
+                mode, levelIndex, chapter, size,
+                grid, playerPos, startPos: {x:0,y:0}, endPos,
+                moves: 0, seconds: 0, timerInterval: null,
+                gameActive: false, finished: false, firstMove: false,
+                revealed: false, // labirinto oculto no início
+            };
+            renderGrid(grid, playerPos, endPos, mazeGridDiv, false);
+            gameTimer.textContent = '0s';
+            gameMoves.textContent = '0';
+            gameStarsEarn.textContent = '0';
+            gameMessage.textContent = '';
+            nextLevelBtn.style.display = 'none';
+            updateItemsBar();
+            showScreen('game');
+        }
+
+        function handleMove(dx, dy) {
+            if (currentGame.finished) return;
+            const newX = currentGame.playerPos.x + dx;
+            const newY = currentGame.playerPos.y + dy;
+            if (newX<0 || newX>=currentGame.size || newY<0 || newY>=currentGame.size) return;
+            if (currentGame.grid[newY][newX] === 0) return;
+
+            // Primeiro movimento: revela o labirinto e inicia o tempo
+            if (!currentGame.firstMove) {
+                currentGame.firstMove = true;
+                currentGame.gameActive = true;
+                currentGame.revealed = true; // revela
+                startGameTimer();
+            }
+
+            currentGame.playerPos.x = newX;
+            currentGame.playerPos.y = newY;
+            currentGame.moves++;
+            gameMoves.textContent = currentGame.moves;
+            renderGrid(currentGame.grid, currentGame.playerPos, currentGame.endPos, mazeGridDiv, currentGame.revealed);
+            checkWin();
+        }
+
+        function startGameTimer() {
+            if (currentGame.timerInterval) clearInterval(currentGame.timerInterval);
+            currentGame.timerInterval = setInterval(() => {
+                if (currentGame.gameActive && !currentGame.finished) {
+                    currentGame.seconds++;
+                    gameTimer.textContent = currentGame.seconds + 's';
+                    updateStarsPreview();
+                }
+            }, 1000);
+        }
+
+        function updateStarsPreview() {
+            const limits = getTimeLimits(currentGame.size);
+            let stars = 0;
+            if (currentGame.seconds <= limits[0]) stars = 3;
+            else if (currentGame.seconds <= limits[1]) stars = 2;
+            else if (currentGame.seconds <= limits[2]) stars = 1;
+            gameStarsEarn.textContent = stars;
+        }
+
+        function checkWin() {
+            if (currentGame.playerPos.x === currentGame.endPos.x && currentGame.playerPos.y === currentGame.endPos.y) {
+                currentGame.finished = true;
+                currentGame.gameActive = false;
+                clearInterval(currentGame.timerInterval);
+                const limits = getTimeLimits(currentGame.size);
+                let earnedStars = 0;
+                if (currentGame.seconds <= limits[0]) earnedStars = 3;
+                else if (currentGame.seconds <= limits[1]) earnedStars = 2;
+                else if (currentGame.seconds <= limits[2]) earnedStars = 1;
+                gameStarsEarn.textContent = earnedStars;
+                gameMessage.textContent = `✨ Vitória! +${earnedStars} ⭐  +${CRYSTALS_PER_COMPLETE} 💎`;
+
+                if (currentGame.mode === 'career') {
+                    const idx = currentGame.levelIndex;
+                    const oldStars = careerStars[idx] || 0;
+                    if (earnedStars > oldStars) {
+                        careerStars[idx] = earnedStars;
+                        starBalance += earnedStars - oldStars;
+                    }
+                    if (!careerBestTimes[idx] || currentGame.seconds < careerBestTimes[idx]) {
+                        careerBestTimes[idx] = currentGame.seconds;
+                    }
+                    crystalBalance += CRYSTALS_PER_COMPLETE;
+
+                    if (idx + 1 < TOTAL_LEVELS && !levelUnlocked[idx + 1]) {
+                        levelUnlocked[idx + 1] = true;
+                    }
+
+                    updateChaptersUnlock();
+
+                    if (idx + 1 < TOTAL_LEVELS && levelUnlocked[idx + 1]) {
+                        nextLevelBtn.style.display = 'inline-block';
+                    } else {
+                        nextLevelBtn.style.display = 'none';
+                    }
+                } else if (currentGame.mode === 'daily') {
+                    const today = getTodayDateString();
+                    if (!dailyBest.time || currentGame.seconds < dailyBest.time) {
+                        dailyBest.time = currentGame.seconds;
+                        dailyBest.stars = earnedStars;
+                        dailyBest.date = today;
+                        crystalBalance += CRYSTALS_PER_COMPLETE;
+                    } else if (earnedStars > dailyBest.stars) {
+                        dailyBest.stars = earnedStars;
+                        crystalBalance += CRYSTALS_PER_COMPLETE;
+                    } else {
+                        crystalBalance += CRYSTALS_PER_COMPLETE;
+                    }
+                }
+                saveProgress();
+                updateStarDisplay();
+            }
+        }
+
+        function restartGame() {
+            currentGame.playerPos = {x:0, y:0};
+            currentGame.moves = 0;
+            currentGame.seconds = 0;
+            currentGame.gameActive = false;
+            currentGame.finished = false;
+            currentGame.firstMove = false;
+            currentGame.revealed = false;
+            clearInterval(currentGame.timerInterval);
+            gameTimer.textContent = '0s';
+            gameMoves.textContent = '0';
+            gameStarsEarn.textContent = '0';
+            gameMessage.textContent = '';
+            nextLevelBtn.style.display = 'none';
+            renderGrid(currentGame.grid, currentGame.playerPos, currentGame.endPos, mazeGridDiv, false);
+        }
+
+        function goToNextLevel() {
+            if (currentGame.mode === 'career') {
+                const nextIdx = currentGame.levelIndex + 1;
+                if (nextIdx < TOTAL_LEVELS && levelUnlocked[nextIdx]) {
+                    const chapter = Math.floor(nextIdx / LEVELS_PER_CHAPTER) + 1;
+                    startGame('career', nextIdx, chapter);
+                } else {
+                    alert('Próximo nível não disponível');
+                }
+            }
+        }
+
+        // ---------- ITENS ----------
+        function updateItemsBar() {
+            itemsBar.innerHTML = '';
+            for (const [id, qty] of Object.entries(inventory)) {
+                if (qty > 0) {
+                    const btn = document.createElement('button');
+                    btn.className = 'item-btn';
+                    btn.textContent = storeItems.find(i => i.id === id).name + ` (${qty})`;
+                    btn.onclick = () => useItem(id);
+                    itemsBar.appendChild(btn);
+                }
+            }
+        }
+
+        function useItem(itemId) {
+            if (currentGame.finished || !currentGame.gameActive) return;
+            if (inventory[itemId] <= 0) return;
+            inventory[itemId]--;
+            if (itemId === 'rewind') {
+                currentGame.seconds = Math.max(0, currentGame.seconds - 5);
+                gameTimer.textContent = currentGame.seconds + 's';
+            } else if (itemId === 'freeze') {
+                currentGame.gameActive = false;
+                setTimeout(() => { if (!currentGame.finished) currentGame.gameActive = true; }, 5000);
+            }
+            saveProgress();
+            updateItemsBar();
+        }
+
+        // ---------- INTERFACE ----------
+        function showScreen(screenId) {
+            Object.values(screens).forEach(s => s.classList.remove('active-screen'));
+            screens[screenId].classList.add('active-screen');
+            if (screenId === 'mainMenu') updateStarDisplay();
+            if (screenId === 'career') renderChapters();
+            if (screenId === 'shop') renderShop();
+            if (screenId === 'daily') renderDailyScreen();
+        }
+
+        function updateStarDisplay() {
+            crystalSpan.textContent = crystalBalance;
+            starSpan.textContent = starBalance;
+            careerCrystals.textContent = crystalBalance;
+            careerStarsSpan.textContent = starBalance;
+            shopCrystals.textContent = crystalBalance;
+        }
+
+        function renderChapters() {
+            chaptersContainer.innerHTML = '';
+            for (let c=1; c<=CHAPTERS; c++) {
+                const div = document.createElement('div');
+                div.className = 'chapter-card';
+                if (!chapterUnlocked[c-1]) {
+                    div.classList.add('locked');
+                    div.innerHTML = `Cap. ${c}<br><span class="locked-icon">🔒</span>`;
+                } else {
+                    div.textContent = `Cap. ${c}`;
+                    div.onclick = () => showLevels(c);
+                }
+                chaptersContainer.appendChild(div);
+            }
+        }
+
+        function showLevels(chapter) {
+            if (!chapterUnlocked[chapter-1]) {
+                alert('Capítulo bloqueado! Complete o capítulo anterior com estrelas suficientes.');
+                return;
+            }
+            currentChapterNumSpan.textContent = chapter;
+            const startIdx = (chapter-1)*LEVELS_PER_CHAPTER;
+            const chapterStarsTotal = getChapterStars(chapter-1);
+            chapterStarsSpan.textContent = chapterStarsTotal;
+            chapterMaxStarsSpan.textContent = LEVELS_PER_CHAPTER * 3;
+
+            levelsContainer.innerHTML = '';
+            for (let i=0; i<LEVELS_PER_CHAPTER; i++) {
+                const levelIdx = startIdx + i;
+                const stars = careerStars[levelIdx] || 0;
+                const isUnlocked = levelUnlocked[levelIdx];
+                const btn = document.createElement('div');
+                btn.className = 'level-btn' + (isUnlocked ? '' : ' locked');
+                btn.innerHTML = `<div>Nível ${i+1}</div><div class="stars">${'⭐'.repeat(stars)}${'☆'.repeat(3-stars)}</div>`;
+                if (isUnlocked) {
+                    btn.onclick = () => startGame('career', levelIdx, chapter);
+                } else {
+                    btn.innerHTML += '<div class="locked-icon">🔒</div>';
+                }
+                levelsContainer.appendChild(btn);
+            }
+            showScreen('levels');
+        }
+
+        function renderDailyScreen() {
+            dailyDateSpan.textContent = new Date().toLocaleDateString();
+            dailyBestStars.textContent = dailyBest.stars;
+            dailyBestTime.textContent = dailyBest.time ? dailyBest.time+'s' : '-';
+            const size = 7;
+            const seed = getSeedFromDate();
+            const grid = generateMaze(size, 2, seed); // capítulo 2 (dificuldade média) para daily
+            renderGrid(grid, {x:0,y:0}, {x:size-1,y:size-1}, dailyMazeGrid, true); // sempre revelado no preview
+        }
+
+        function getSeedFromDate() {
+            const today = new Date();
+            return today.getFullYear()*1000 + (today.getMonth()+1)*50 + today.getDate();
+        }
+
+        function renderShop() {
+            storeItemsDiv.innerHTML = '';
+            storeItems.forEach(item => {
+                const div = document.createElement('div');
+                div.className = 'store-item';
+                div.innerHTML = `
+                    <div style="font-size:1.4rem;">${item.name}</div>
+                    <div class="price">💎 ${item.price}</div>
+                    <div style="font-size:0.9rem; margin:8px 0;">${item.desc}</div>
+                    <button class="item-btn" style="font-size:1.2rem;">Comprar</button>
+                `;
+                div.querySelector('button').onclick = () => buyItem(item);
+                storeItemsDiv.appendChild(div);
+            });
+        }
+
+        function buyItem(item) {
+            if (crystalBalance >= item.price) {
+                crystalBalance -= item.price;
+                inventory[item.id] = (inventory[item.id] || 0) + 1;
+                saveProgress();
+                renderShop();
+                updateStarDisplay();
+            } else {
+                alert('Cristais insuficientes!');
+            }
+        }
+
+        // ---------- EVENT LISTENERS ----------
+        document.getElementById('startBtn').addEventListener('click', () => showScreen('mainMenu'));
+        document.getElementById('dailyBtn').addEventListener('click', () => {
+            renderDailyScreen();
+            showScreen('daily');
+        });
+        document.getElementById('careerBtn').addEventListener('click', () => showScreen('career'));
+        document.getElementById('shopBtn').addEventListener('click', () => {
+            renderShop();
+            showScreen('shop');
+        });
+        document.getElementById('backFromCareer').addEventListener('click', () => showScreen('mainMenu'));
+        document.getElementById('backFromLevels').addEventListener('click', () => showScreen('career'));
+        document.getElementById('backFromDaily').addEventListener('click', () => showScreen('mainMenu'));
+        document.getElementById('backFromShop').addEventListener('click', () => showScreen('mainMenu'));
+        document.getElementById('exitGameBtn').addEventListener('click', () => {
+            clearInterval(currentGame.timerInterval);
+            showScreen('mainMenu');
+        });
+        document.getElementById('restartGameBtn').addEventListener('click', restartGame);
+        document.getElementById('playDailyBtn').addEventListener('click', () => {
+            startGame('daily', 0, 2); // capítulo 2 para daily
+        });
+        document.getElementById('nextLevelBtn').addEventListener('click', goToNextLevel);
+
+        // Teclado
+        window.addEventListener('keydown', (e) => {
+            if (!screens.game.classList.contains('active-screen')) return;
+            e.preventDefault();
+            const key = e.key;
+            if (key.startsWith('Arrow')) {
+                const dir = { 'ArrowUp': [0,-1], 'ArrowDown': [0,1], 'ArrowLeft': [-1,0], 'ArrowRight': [1,0] }[key];
+                if (dir) handleMove(dir[0], dir[1]);
+            }
+        });
+
+        // Inicialização
+        loadProgress();
+        updateStarDisplay();
+        renderChapters();
+    })();
+</script>
+</body>
+</html>
